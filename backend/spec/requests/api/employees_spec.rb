@@ -53,10 +53,10 @@ RSpec.describe 'Api::Employees', type: :request do
   describe 'GET /api/employees/:id' do
     it 'returns the employee, current salary, and salary history' do
       employee = create(:employee, first_name: 'Tony', last_name: 'Stark')
-      older_revision = create(:salary_revision, employee: employee, base_salary: 1_100_000,
-                                                 effective_from: Date.new(2025, 4, 1))
       current_salary = create(:salary_revision, employee: employee, base_salary: 1_200_000,
                                                  effective_from: Date.new(2025, 7, 1))
+      older_revision = create(:salary_revision, employee: employee, base_salary: 1_100_000,
+                                                 effective_from: Date.new(2025, 4, 1))
 
       get "/api/employees/#{employee.id}"
 

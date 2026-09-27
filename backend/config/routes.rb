@@ -1,6 +1,8 @@
 Rails.application.routes.draw do
   namespace :api do
-    resources :employees, only: %i[index show]
+    resources :employees, only: %i[index show] do
+      resources :salary_revisions, only: :create, module: :employees
+    end
   end
 
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
