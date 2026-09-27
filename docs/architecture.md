@@ -46,8 +46,7 @@ Use a JSON REST API under `/api`.
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | GET | `/api/employees` | Search, filter, sort, and paginate employees. |
-| GET | `/api/employees/:id` | Employee details, current salary, and latest revision ID. |
-| GET | `/api/employees/:id/salary_revisions` | Paginated salary history. |
+| GET | `/api/employees/:id` | Employee details, current salary and salary revisions in reverse order. |
 | POST | `/api/employees/:id/salary_revisions` | Create a salary revision with a stale-edit check. |
 | GET | `/api/analytics/summary` | Filtered headcount and per-currency salary statistics. |
 | GET | `/api/health` | Minimal service health status. |

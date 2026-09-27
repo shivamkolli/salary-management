@@ -19,5 +19,46 @@ module Api
         }
       }
     end
+
+    def show
+      employee = Employee.includes(:salary_revisions).find(params[:id])
+      render json: { employee: employee_detail(employee) }
+    rescue ActiveRecord::RecordNotFound
+      render json: { error: "Employee not found" }, status: :not_found
+    end
+
+    private
+
+    def employee_detail(employee)
+      salary_revisions = employee.recent_revisions
+      current_revision = employee.current_revision
+
+      {
+        id: employee.id,
+        employee_number: employee.employee_number,
+        first_name: employee.first_name,
+        last_name: employee.last_name,
+        email: employee.email,
+        country: employee.country,
+        department: employee.department,
+        job_title: employee.job_title,
+        level: employee.level,
+        currency: employee.currency,
+        joined_date: employee.joined_date,
+        active: employee.active,
+        current_salary: current_revision&.base_salary,
+        salary_revisions: salary_revisions.map { |revision| salary_revision_json(revision) }
+      }
+    end
+
+    def salary_revision_json(salary_revision)
+      {
+        id: salary_revision.id,
+        base_salary: salary_revision.base_salary,
+        effective_from: salary_revision.effective_from,
+        reason: salary_revision.reason,
+        created_at: salary_revision.created_at
+      }
+    end
   end
 end

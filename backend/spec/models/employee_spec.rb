@@ -23,4 +23,45 @@ RSpec.describe Employee, type: :model do
       expect(active_employees).to contain_exactly(active_employee)
     end
   end
+
+  describe '#recent_revisions' do
+    subject(:recent_revisions) { employee.recent_revisions }
+
+    let(:employee) { create(:employee) }
+
+    it 'orders revisions by effective date and ID, newest first' do
+      older_revision = create(:salary_revision, employee: employee, effective_from: Date.new(2022, 1, 1))
+      first_same_day_revision = create(:salary_revision, employee: employee, effective_from: Date.new(2023, 1, 1))
+      latest_same_day_revision = create(:salary_revision, employee: employee, effective_from: Date.new(2023, 1, 1))
+
+      expect(recent_revisions).to eq(
+        [ latest_same_day_revision, first_same_day_revision, older_revision ]
+      )
+    end
+  end
+
+  describe '#current_revision' do
+    subject(:current_revision) { employee.current_revision }
+
+    let(:employee) { create(:employee) }
+
+    it 'returns nil when the employee has no salary revisions' do
+      expect(current_revision).to be_nil
+    end
+
+    it 'returns the revision with the latest effective date' do
+      create(:salary_revision, employee: employee, effective_from: Date.new(2021, 1, 1))
+      expected_revision = create(:salary_revision, employee: employee, effective_from: Date.new(2023, 1, 1))
+      create(:salary_revision, employee: employee, effective_from: Date.new(2022, 1, 1))
+
+      expect(current_revision).to eq(expected_revision)
+    end
+
+    it 'uses the latest recorded revision when effective dates match' do
+      create(:salary_revision, employee: employee, effective_from: Date.new(2023, 1, 1))
+      expected_revision = create(:salary_revision, employee: employee, effective_from: Date.new(2023, 1, 1))
+
+      expect(current_revision).to eq(expected_revision)
+    end
+  end
 end
