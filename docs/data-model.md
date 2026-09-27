@@ -22,8 +22,10 @@ erDiagram
         string country
         string department
         string job_title
+        string level
         string currency
         date joined_date
+        boolean active
         timestamp created_at
         timestamp updated_at
     }
@@ -56,6 +58,7 @@ Stores the employee’s identity, organizational placement, and compensation cur
 | `country` | VARCHAR(2) | Required, supported value | Country code, such as `IN` or `US`. |
 | `department` | VARCHAR(100) | Required, controlled value | Department used for filtering and reporting. |
 | `job_title` | VARCHAR(100) | Required, controlled value | Employee’s job title. |
+| `level` | VARCHAR(50) | Required, controlled value | Employee’s seniority level. |
 | `currency` | VARCHAR(3) | Required, supported value | Fixed compensation currency: `INR`, `USD`, `EUR`, or `GBP`. |
 | `joined_date` | DATE | Required | Employment start date; not in the future for seeded active employees. |
 | `created_at` | TIMESTAMP | Required, server-managed | Record creation time in UTC. |
@@ -69,7 +72,7 @@ Stores an initial salary or a subsequent change. Records are appended and retain
 | --- | --- | --- | --- |
 | `id` | BIGINT | Primary key, generated | Revision identifier; resolves same-effective-date ties. |
 | `employee_id` | BIGINT | Required foreign key | Employee whose salary this revision describes. |
-| `amount` | NUMERIC(15,2) | Required, greater than zero | Gross annual base salary in the employee’s currency. |
+| `base_salary` | NUMERIC(15,2) | Required, greater than zero | Gross annual base salary in the employee’s currency. |
 | `effective_from` | DATE | Required | Date the salary applies, from employment start through today. |
 | `reason` | TEXT | Required, nonblank | Explanation for the change or initial salary entry. |
 | `created_at` | TIMESTAMP | Required, server-managed | When the revision was recorded, in UTC. |
