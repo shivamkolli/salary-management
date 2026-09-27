@@ -97,6 +97,11 @@ GEM
     drb (2.2.3)
     erb (6.0.7)
     erubi (1.13.1)
+    factory_bot (6.6.0)
+      activesupport (>= 6.1.0)
+    factory_bot_rails (6.5.1)
+      factory_bot (~> 6.5)
+      railties (>= 6.1.0)
     ffi (1.17.4-arm64-darwin)
     globalid (1.4.0)
       activesupport (>= 6.1)
@@ -284,6 +289,7 @@ DEPENDENCIES
   brakeman
   bundler-audit
   debug
+  factory_bot_rails
   image_processing (~> 1.2)
   pg (~> 1.1)
   puma (>= 5.0)
