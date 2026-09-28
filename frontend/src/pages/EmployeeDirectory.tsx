@@ -22,6 +22,8 @@ const countries = [
   { code: 'DE', name: 'Germany' },
 ]
 
+const currencies = ['INR', 'USD', 'EUR', 'GBP']
+
 export function EmployeeDirectory() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [pagination, setPagination] = useState<Pagination | null>(null)
@@ -32,6 +34,7 @@ export function EmployeeDirectory() {
   const [search, setSearch] = useState('')
   const [country, setCountry] = useState('')
   const [department, setDepartment] = useState('')
+  const [currency, setCurrency] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -41,7 +44,7 @@ export function EmployeeDirectory() {
       setError('')
 
       try {
-        const response = await getEmployees({ page, search, country, department })
+        const response = await getEmployees({ page, search, country, department, currency })
 
         if (!cancelled) {
           setEmployees(response.employees)
@@ -67,7 +70,7 @@ export function EmployeeDirectory() {
     return () => {
       cancelled = true
     }
-  }, [country, department, page, search])
+  }, [country, currency, department, page, search])
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -80,10 +83,11 @@ export function EmployeeDirectory() {
     setSearch('')
     setCountry('')
     setDepartment('')
+    setCurrency('')
     setPage(1)
   }
 
-  const hasFilters = Boolean(search || country || department)
+  const hasFilters = Boolean(search || country || department || currency)
 
   return (
     <section className="page" aria-labelledby="employees-heading">
@@ -138,6 +142,22 @@ export function EmployeeDirectory() {
               >
                 <option value="">All departments</option>
                 {departments.map((item) => (
+                  <option key={item} value={item}>{item}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              <span className="sr-only">Currency</span>
+              <select
+                value={currency}
+                onChange={(event) => {
+                  setCurrency(event.target.value)
+                  setPage(1)
+                }}
+              >
+                <option value="">All currencies</option>
+                {currencies.map((item) => (
                   <option key={item} value={item}>{item}</option>
                 ))}
               </select>

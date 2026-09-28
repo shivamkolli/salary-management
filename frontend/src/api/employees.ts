@@ -13,6 +13,7 @@ export function getEmployees(params: EmployeeListParams = {}) {
   if (params.search) query.set('search', params.search)
   if (params.country) query.set('country', params.country)
   if (params.department) query.set('department', params.department)
+  if (params.currency) query.set('currency', params.currency)
   if (params.page) query.set('page', params.page.toString())
   if (params.perPage) query.set('per_page', params.perPage.toString())
 

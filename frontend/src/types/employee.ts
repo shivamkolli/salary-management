@@ -50,6 +50,7 @@ export interface EmployeeListParams {
   search?: string
   country?: string
   department?: string
+  currency?: string
   page?: number
   perPage?: number
 }
