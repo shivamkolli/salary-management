@@ -165,3 +165,8 @@ Further rationale is recorded in [Design decisions](docs/decisions.md) and [Perf
 - [Testing strategy](docs/testing-strategy.md)
 - [Performance](docs/performance.md)
 - [AI-assisted development](docs/ai-assisted-development.md)
+
+## Live Demo & Walkthrough
+
+- 🌍 **Live Application:** [https://salary-management-web-n8q9.onrender.com/](https://salary-management-web-n8q9.onrender.com/)
+- 🎥 **Video Walkthrough:** [Watch on Loom](https://www.loom.com/share/9f47ab62d133433685b0bee26748fdde)
