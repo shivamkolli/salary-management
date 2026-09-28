@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { getEmployee } from '../api/employees'
-import type { EmployeeDetails as EmployeeDetailsData } from '../types/employee'
+import { SalaryRevisionForm } from '../components/SalaryRevisionForm'
+import type {
+  EmployeeDetails as EmployeeDetailsData,
+  SalaryRevision,
+} from '../types/employee'
 import './EmployeeDetails.css'
 
 function formatMoney(amount: string, currency: string) {
@@ -29,6 +33,7 @@ export function EmployeeDetails() {
   const [employee, setEmployee] = useState<EmployeeDetailsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [showSalaryForm, setShowSalaryForm] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -88,6 +93,28 @@ export function EmployeeDetails() {
   const fullName = `${employee.first_name} ${employee.last_name}`
   const initials = `${employee.first_name[0] ?? ''}${employee.last_name[0] ?? ''}`
 
+  function addSalaryRevision(salaryRevision: SalaryRevision) {
+    setEmployee((currentEmployee) => {
+      if (!currentEmployee) return currentEmployee
+
+      const salaryRevisions = [salaryRevision, ...currentEmployee.salary_revisions]
+        .sort((first, second) => (
+          second.effective_from.localeCompare(first.effective_from) || second.id - first.id
+        ))
+      const today = new Date().toISOString().slice(0, 10)
+      const currentSalary = salaryRevisions.find(
+        (revision) => revision.effective_from <= today,
+      )?.base_salary ?? null
+
+      return {
+        ...currentEmployee,
+        current_salary: currentSalary,
+        salary_revisions: salaryRevisions,
+      }
+    })
+    setShowSalaryForm(false)
+  }
+
   return (
     <section className="employee-details" aria-labelledby="employee-name">
       <Link className="back-link" to="/employees">← Back to employees</Link>
@@ -116,6 +143,15 @@ export function EmployeeDetails() {
             <p className="salary-empty">No salary recorded</p>
           )}
           <p className="salary-currency">Paid in {employee.currency}</p>
+          {!showSalaryForm && (
+            <button
+              className="revise-salary-button"
+              type="button"
+              onClick={() => setShowSalaryForm(true)}
+            >
+              Revise salary
+            </button>
+          )}
         </section>
 
         <section className="detail-card" aria-labelledby="employment-heading">
@@ -137,6 +173,15 @@ export function EmployeeDetails() {
           </dl>
         </section>
       </div>
+
+      {showSalaryForm && (
+        <SalaryRevisionForm
+          employeeId={employee.id}
+          currency={employee.currency}
+          onCreated={addSalaryRevision}
+          onCancel={() => setShowSalaryForm(false)}
+        />
+      )}
 
       <section className="history-card" aria-labelledby="salary-history-heading">
         <div className="history-heading">

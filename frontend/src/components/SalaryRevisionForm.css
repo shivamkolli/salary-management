@@ -1,0 +1,135 @@
+.salary-form-card {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.65fr) minmax(0, 1.35fr);
+  gap: 2rem;
+  padding: 1.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.875rem;
+  background: var(--color-surface);
+}
+
+.salary-form-card h2 {
+  margin: 0.25rem 0 0.5rem;
+  font-size: 1.125rem;
+}
+
+.salary-form-description {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.salary-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.salary-form label {
+  display: grid;
+  align-content: start;
+  gap: 0.375rem;
+  color: var(--color-text);
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.salary-form input,
+.salary-form textarea {
+  width: 100%;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.salary-form input {
+  height: 2.5rem;
+  padding-inline: 0.75rem;
+}
+
+.salary-form textarea {
+  min-height: 5rem;
+  padding: 0.625rem 0.75rem;
+  resize: vertical;
+}
+
+.salary-form small,
+.salary-form__error {
+  color: #9f2d2d;
+}
+
+.salary-form__reason,
+.salary-form__actions {
+  grid-column: 1 / -1;
+}
+
+.salary-form__actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.salary-cancel,
+.salary-submit {
+  min-height: 2.5rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.salary-cancel {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.salary-cancel:hover:not(:disabled) {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+}
+
+.salary-submit {
+  border: 0;
+  background: var(--color-accent);
+  color: #ffffff;
+}
+
+.salary-submit:hover:not(:disabled) {
+  background: var(--color-accent-strong);
+}
+
+.salary-cancel:disabled,
+.salary-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.salary-form__error,
+.salary-form__success {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+.salary-form__success {
+  color: var(--color-accent-strong);
+}
+
+@media (max-width: 48rem) {
+  .salary-form-card {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 36rem) {
+  .salary-form {
+    grid-template-columns: 1fr;
+  }
+
+  .salary-form__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
