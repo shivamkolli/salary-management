@@ -1,31 +1,25 @@
-import { NavLink } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 
 export function AppHeader() {
   return (
     <header className="app-header">
       <div className="app-header__content">
-        <NavLink className="brand" to="/employees" aria-label="ACME Compensation home">
+        <Link className="brand" to="/summary" aria-label="ACME Compensation home">
           <span className="brand__mark" aria-hidden="true">A</span>
           <span>
             <strong className="brand__name">ACME</strong>
             <span className="brand__product">Compensation</span>
           </span>
-        </NavLink>
+        </Link>
 
-        <nav className="app-navigation" aria-label="Primary navigation">
-          <NavLink
-            className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}
-            to="/summary"
-          >
-            Summary
-          </NavLink>
-          <NavLink
-            className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}
-            to="/employees"
-          >
-            HR Manager
-          </NavLink>
-        </nav>
+        <div className="current-user" aria-label="Current user: HR Manager">
+          <span className="current-user__avatar" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0" />
+            </svg>
+          </span>
+          <span className="user-role">HR Manager</span>
+        </div>
       </div>
     </header>
   )

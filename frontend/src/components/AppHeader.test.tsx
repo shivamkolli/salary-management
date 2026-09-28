@@ -4,15 +4,17 @@ import { describe, expect, it } from 'vitest'
 import { AppHeader } from './AppHeader'
 
 describe('AppHeader', () => {
-  it('shows the product name and HR manager navigation', () => {
+  it('shows the product name and HR manager role', () => {
     render(
       <MemoryRouter initialEntries={['/employees']}>
         <AppHeader />
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole('link', { name: 'ACME Compensation home' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Summary' })).toHaveAttribute('href', '/summary')
-    expect(screen.getByRole('link', { name: 'HR Manager' })).toHaveAttribute('href', '/employees')
+    expect(screen.getByRole('link', { name: 'ACME Compensation home' })).toHaveAttribute(
+      'href',
+      '/summary',
+    )
+    expect(screen.getByLabelText('Current user: HR Manager')).toBeInTheDocument()
   })
 })

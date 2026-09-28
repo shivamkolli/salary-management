@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppHeader } from './components/AppHeader'
+import { AppSidebar } from './components/AppSidebar'
 import { EmployeeDirectory } from './pages/EmployeeDirectory'
 import { EmployeeDetails } from './pages/EmployeeDetails'
 import { SummaryPage } from './pages/SummaryPage'
@@ -10,14 +11,17 @@ function App() {
     <BrowserRouter>
       <div className="app-shell">
         <AppHeader />
-        <main className="app-main">
-          <Routes>
-            <Route path="/" element={<Navigate to="/employees" replace />} />
-            <Route path="/summary" element={<SummaryPage />} />
-            <Route path="/employees" element={<EmployeeDirectory />} />
-            <Route path="/employees/:id" element={<EmployeeDetails />} />
-          </Routes>
-        </main>
+        <div className="app-body">
+          <AppSidebar />
+          <main className="app-main">
+            <Routes>
+              <Route path="/" element={<Navigate to="/summary" replace />} />
+              <Route path="/summary" element={<SummaryPage />} />
+              <Route path="/employees" element={<EmployeeDirectory />} />
+              <Route path="/employees/:id" element={<EmployeeDetails />} />
+            </Routes>
+          </main>
+        </div>
       </div>
     </BrowserRouter>
   )
