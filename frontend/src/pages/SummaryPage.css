@@ -89,6 +89,25 @@
   color: #9f2d2d;
 }
 
+.summary-message--error p {
+  margin: 0 0 1rem;
+}
+
+.summary-message--error button {
+  min-height: 2.5rem;
+  padding: 0.5rem 0.875rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: var(--color-accent);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.summary-message--error button:hover {
+  background: var(--color-accent-strong);
+}
+
 @media (max-width: 36rem) {
   .summary-cards {
     grid-template-columns: 1fr;

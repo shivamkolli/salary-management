@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getAnalyticsSummary } from '../api/analytics'
+import { ApiError } from '../api/client'
 import type { AnalyticsSummary } from '../types/analytics'
 import './SummaryPage.css'
 
@@ -7,16 +8,20 @@ export function SummaryPage() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     let cancelled = false
 
     async function loadSummary() {
+      setLoading(true)
+      setError('')
+
       try {
         const response = await getAnalyticsSummary()
         if (!cancelled) setSummary(response.summary)
-      } catch {
-        if (!cancelled) setError('Unable to load organization summary.')
+      } catch (requestError) {
+        if (!cancelled) setError(summaryErrorMessage(requestError))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -27,14 +32,21 @@ export function SummaryPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [retryCount])
 
   if (loading) {
     return <p className="summary-message" role="status">Loading summary…</p>
   }
 
   if (error || !summary) {
-    return <p className="summary-message summary-message--error" role="alert">{error}</p>
+    return (
+      <div className="summary-message summary-message--error" role="alert">
+        <p>{error}</p>
+        <button type="button" onClick={() => setRetryCount((count) => count + 1)}>
+          Retry
+        </button>
+      </div>
+    )
   }
 
   const departments = Object.entries(summary.employees_by_department)
@@ -87,4 +99,16 @@ export function SummaryPage() {
       </section>
     </section>
   )
+}
+
+function summaryErrorMessage(error: unknown) {
+  if (error instanceof TypeError) {
+    return 'Unable to connect to the server. Check your connection and try again.'
+  }
+
+  if (error instanceof ApiError && error.status >= 500) {
+    return 'The summary service is temporarily unavailable. Try again shortly.'
+  }
+
+  return 'Unable to load organization summary.'
 }
