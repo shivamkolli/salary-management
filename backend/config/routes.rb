@@ -1,6 +1,7 @@
 Rails.application.routes.draw do
   namespace :api do
     get "health", to: "health#show"
+    get "analytics/summary", to: "analytics#summary"
 
     resources :employees, only: %i[index show] do
       resources :salary_revisions, only: :create, module: :employees
