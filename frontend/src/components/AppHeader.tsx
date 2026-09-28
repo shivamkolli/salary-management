@@ -17,7 +17,7 @@ export function AppHeader() {
             className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}
             to="/employees"
           >
-            Employees
+            HR Manager
           </NavLink>
         </nav>
       </div>
