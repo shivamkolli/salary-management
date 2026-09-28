@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiError } from '../api/client'
 import { getEmployees } from '../api/employees'
 import { EmployeeDirectory } from './EmployeeDirectory'
 
@@ -46,5 +47,49 @@ describe('EmployeeDirectory', () => {
         currency: 'USD',
       })
     })
+  })
+
+  it('explains a network failure and retries the request', async () => {
+    mockedGetEmployees
+      .mockReset()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce({
+        employees: [],
+        pagination: {
+          page: 1,
+          per_page: 25,
+          total: 0,
+          total_pages: 0,
+        },
+      })
+
+    render(
+      <MemoryRouter>
+        <EmployeeDirectory />
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Unable to connect to the server. Check your connection and try again.',
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+
+    expect(await screen.findByText('No employees match your search.')).toBeInTheDocument()
+    expect(mockedGetEmployees).toHaveBeenCalledTimes(2)
+  })
+
+  it('explains when the employee API is unavailable', async () => {
+    mockedGetEmployees.mockRejectedValue(new ApiError(503, undefined))
+
+    render(
+      <MemoryRouter>
+        <EmployeeDirectory />
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'The employee service is temporarily unavailable. Try again shortly.',
+    )
   })
 })

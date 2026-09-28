@@ -29,6 +29,7 @@ export function EmployeeDirectory() {
   const [pagination, setPagination] = useState<Pagination | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [retryCount, setRetryCount] = useState(0)
   const [page, setPage] = useState(1)
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
@@ -52,13 +53,9 @@ export function EmployeeDirectory() {
         }
       } catch (requestError) {
         if (!cancelled) {
-          const message = requestError instanceof ApiError
-            ? requestError.message
-            : 'Unable to load employees.'
-
           setEmployees([])
           setPagination(null)
-          setError(message)
+          setError(employeeErrorMessage(requestError))
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -70,7 +67,7 @@ export function EmployeeDirectory() {
     return () => {
       cancelled = true
     }
-  }, [country, currency, department, page, search])
+  }, [country, currency, department, page, retryCount, search])
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -174,7 +171,16 @@ export function EmployeeDirectory() {
         {loading && <p className="directory-message" role="status">Loading employees…</p>}
 
         {!loading && error && (
-          <p className="directory-message directory-message--error" role="alert">{error}</p>
+          <div className="directory-message directory-message--error" role="alert">
+            <p>{error}</p>
+            <button
+              className="button button--primary"
+              type="button"
+              onClick={() => setRetryCount((count) => count + 1)}
+            >
+              Retry
+            </button>
+          </div>
         )}
 
         {!loading && !error && employees.length === 0 && (
@@ -245,4 +251,16 @@ export function EmployeeDirectory() {
       </div>
     </section>
   )
+}
+
+function employeeErrorMessage(error: unknown) {
+  if (error instanceof TypeError) {
+    return 'Unable to connect to the server. Check your connection and try again.'
+  }
+
+  if (error instanceof ApiError && error.status >= 500) {
+    return 'The employee service is temporarily unavailable. Try again shortly.'
+  }
+
+  return 'Unable to load employees.'
 }

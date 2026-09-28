@@ -115,6 +115,10 @@
   color: #9f2d2d;
 }
 
+.directory-message--error p {
+  margin: 0 0 1rem;
+}
+
 .table-scroll {
   overflow-x: auto;
 }
