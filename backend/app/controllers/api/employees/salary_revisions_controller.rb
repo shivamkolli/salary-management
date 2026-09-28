@@ -4,9 +4,11 @@ module Api
       before_action :set_employee
 
       def create
-        salary_revision = @employee.salary_revisions.build(salary_revision_params)
+        salary_revision = @employee.with_lock do
+          @employee.salary_revisions.create(salary_revision_params)
+        end
 
-        if salary_revision.save
+        if salary_revision.persisted?
           render json: { salary_revision: salary_revision_json(salary_revision) }, status: :created
         else
           render json: { errors: salary_revision.errors.messages.transform_values(&:first) },
