@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { getEmployees } from '../api/employees'
+import { countries, getCountryName } from '../constants/countries'
 import type { Employee, Pagination } from '../types/employee'
 import './EmployeeDirectory.css'
 
@@ -13,13 +14,6 @@ const departments = [
   'Marketing',
   'Operations',
   'Sales',
-]
-
-const countries = [
-  { code: 'IN', name: 'India' },
-  { code: 'US', name: 'United States' },
-  { code: 'GB', name: 'United Kingdom' },
-  { code: 'DE', name: 'Germany' },
 ]
 
 const currencies = ['INR', 'USD', 'EUR', 'GBP']
@@ -92,7 +86,6 @@ export function EmployeeDirectory() {
         <div className="page-heading">
           <p className="eyebrow">People</p>
           <h1 id="employees-heading">Employees</h1>
-          <p>Search and review employee compensation records.</p>
         </div>
         {pagination && <p className="result-count">{pagination.total.toLocaleString()} employees</p>}
       </div>
@@ -213,7 +206,7 @@ export function EmployeeDirectory() {
                       <strong>{employee.job_title}</strong>
                       <span>{employee.department}</span>
                     </td>
-                    <td>{employee.country}</td>
+                    <td>{getCountryName(employee.country)}</td>
                     <td className="level-cell">{employee.level}</td>
                     <td>{employee.currency}</td>
                   </tr>

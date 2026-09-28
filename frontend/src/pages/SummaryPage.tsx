@@ -65,7 +65,6 @@ export function SummaryPage() {
       <header className="page-heading">
         <p className="eyebrow">Overview</p>
         <h1 id="summary-heading">Organization summary</h1>
-        <p>Active employee and department headcount.</p>
       </header>
 
       <div className="summary-cards">

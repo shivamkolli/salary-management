@@ -25,6 +25,41 @@ describe('EmployeeDirectory', () => {
     })
   })
 
+  it('shows full country names in the employee table', async () => {
+    mockedGetEmployees.mockResolvedValue({
+      employees: [
+        {
+          id: 7,
+          employee_number: 'EMP-00007',
+          first_name: 'Ava',
+          last_name: 'Shah',
+          email: 'ava.shah@acme.test',
+          country: 'US',
+          department: 'Engineering',
+          job_title: 'Staff Engineer',
+          level: 'staff',
+          currency: 'USD',
+          joined_date: '2022-01-10',
+          active: true,
+        },
+      ],
+      pagination: {
+        page: 1,
+        per_page: 25,
+        total: 1,
+        total_pages: 1,
+      },
+    })
+
+    render(
+      <MemoryRouter>
+        <EmployeeDirectory />
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('cell', { name: 'United States' })).toBeInTheDocument()
+  })
+
   it('filters employees by currency', async () => {
     render(
       <MemoryRouter>

@@ -46,6 +46,7 @@ describe('EmployeeDetails', () => {
     )
 
     expect(await screen.findByRole('heading', { name: 'Ava Shah' })).toBeInTheDocument()
+    expect(screen.getByText('United States')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Add salary revision' })).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Revise salary' }))

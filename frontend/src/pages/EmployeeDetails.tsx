@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { getEmployee } from '../api/employees'
 import { SalaryRevisionForm } from '../components/SalaryRevisionForm'
+import { getCountryName } from '../constants/countries'
 import type {
   EmployeeDetails as EmployeeDetailsData,
   SalaryRevision,
@@ -160,7 +161,7 @@ export function EmployeeDetails() {
           <dl className="employment-list">
             <div>
               <dt>Country</dt>
-              <dd>{employee.country}</dd>
+              <dd>{getCountryName(employee.country)}</dd>
             </div>
             <div>
               <dt>Level</dt>
