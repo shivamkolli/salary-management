@@ -21,8 +21,9 @@
 
 .directory-toolbar {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 1rem;
   padding: 1rem;
   border-bottom: 1px solid var(--color-border);
@@ -37,8 +38,14 @@
 }
 
 .search-form {
-  flex: 1 1 26rem;
+  flex: 1 1 22rem;
   max-width: 34rem;
+}
+
+.directory-filters {
+  flex: 1 1 28rem;
+  flex-wrap: wrap;
+  justify-content: flex-start;
 }
 
 .search-form input {
@@ -203,11 +210,15 @@ td span {
   }
 
   .search-form {
+    width: 100%;
+    flex: none;
     max-width: none;
   }
 
   .directory-filters {
-    flex-wrap: wrap;
+    width: 100%;
+    flex: none;
+    justify-content: flex-start;
   }
 }
 
