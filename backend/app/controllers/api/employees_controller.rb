@@ -6,7 +6,17 @@ module Api
     def index
       page = [ params.fetch(:page, 1).to_i, 1 ].max
       per_page = params.fetch(:per_page, DEFAULT_PER_PAGE).to_i.clamp(1, MAX_PER_PAGE)
-      employees = Employee.active.order(:last_name, :first_name, :id)
+      employees = Employee.active
+
+      if params[:search].present?
+        search = "%#{Employee.sanitize_sql_like(params[:search].strip)}%"
+        employees = employees.where(
+          "CONCAT(first_name, ' ', last_name) ILIKE :search OR employee_number ILIKE :search",
+          search: search
+        )
+      end
+
+      employees = employees.order(:last_name, :first_name, :id)
       total_count = employees.count
 
       render json: {

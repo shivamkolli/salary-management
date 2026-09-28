@@ -50,6 +50,26 @@ RSpec.describe 'Api::Employees', type: :request do
         'per_page' => 1
       )
     end
+
+    it 'searches by full name without matching letter case' do
+      matching_employee = create(:employee, first_name: 'Tony', last_name: 'Stark')
+      create(:employee, first_name: 'Steve', last_name: 'Rogers')
+
+      get '/api/employees', params: { search: 'tony stark' }
+
+      expect(response).to have_http_status(:ok)
+      expect(employee_ids).to eq([ matching_employee.id ])
+    end
+
+    it 'searches by employee number' do
+      matching_employee = create(:employee, employee_number: 'ACME-1234')
+      create(:employee, employee_number: 'ACME-5678')
+
+      get '/api/employees', params: { search: '1234' }
+
+      expect(response).to have_http_status(:ok)
+      expect(employee_ids).to eq([ matching_employee.id ])
+    end
   end
 
   describe 'GET /api/employees/:id' do
