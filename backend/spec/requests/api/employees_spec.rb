@@ -70,6 +70,28 @@ RSpec.describe 'Api::Employees', type: :request do
       expect(response).to have_http_status(:ok)
       expect(employee_ids).to eq([ matching_employee.id ])
     end
+
+    it 'filters by country' do
+      matching_employee = create(:employee, country: 'IN')
+      create(:employee, country: 'US')
+
+      get '/api/employees', params: { country: 'IN' }
+
+      expect(response).to have_http_status(:ok)
+      expect(employee_ids).to eq([ matching_employee.id ])
+      expect(response.parsed_body.dig('pagination', 'total')).to eq(1)
+    end
+
+    it 'filters by department' do
+      matching_employee = create(:employee, department: 'Engineering')
+      create(:employee, department: 'Finance')
+
+      get '/api/employees', params: { department: 'Engineering' }
+
+      expect(response).to have_http_status(:ok)
+      expect(employee_ids).to eq([ matching_employee.id ])
+      expect(response.parsed_body.dig('pagination', 'total')).to eq(1)
+    end
   end
 
   describe 'GET /api/employees/:id' do

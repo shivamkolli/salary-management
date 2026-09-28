@@ -16,6 +16,9 @@ module Api
         )
       end
 
+      employees = employees.where(country: params[:country]) if params[:country].present?
+      employees = employees.where(department: params[:department]) if params[:department].present?
+
       employees = employees.order(:last_name, :first_name, :id)
       total_count = employees.count
 
