@@ -6,19 +6,8 @@ module Api
     def index
       page = [ params.fetch(:page, 1).to_i, 1 ].max
       per_page = params.fetch(:per_page, DEFAULT_PER_PAGE).to_i.clamp(1, MAX_PER_PAGE)
-      employees = Employee.active
-
-      if params[:search].present?
-        search = "%#{Employee.sanitize_sql_like(params[:search].strip)}%"
-        employees = employees.where(
-          "CONCAT(first_name, ' ', last_name) ILIKE :search OR employee_number ILIKE :search",
-          search: search
-        )
-      end
-
-      employees = employees.where(country: params[:country]) if params[:country].present?
-      employees = employees.where(department: params[:department]) if params[:department].present?
-
+      employees = search_employees(Employee.active)
+      employees = filter_employees(employees)
       employees = employees.order(:last_name, :first_name, :id)
       total_count = employees.count
 
@@ -41,6 +30,22 @@ module Api
     end
 
     private
+
+    def search_employees(employees)
+      return employees if params[:search].blank?
+
+      search = "%#{Employee.sanitize_sql_like(params[:search].strip)}%"
+      employees.where(
+        "CONCAT(first_name, ' ', last_name) ILIKE :search OR employee_number ILIKE :search",
+        search: search
+      )
+    end
+
+    def filter_employees(employees)
+      employees = employees.where(country: params[:country]) if params[:country].present?
+      employees = employees.where(department: params[:department]) if params[:department].present?
+      employees
+    end
 
     def employee_detail(employee)
       salary_revisions = employee.recent_revisions
