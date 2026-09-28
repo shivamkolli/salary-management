@@ -92,6 +92,17 @@ RSpec.describe 'Api::Employees', type: :request do
       expect(employee_ids).to eq([ matching_employee.id ])
       expect(response.parsed_body.dig('pagination', 'total')).to eq(1)
     end
+
+    it 'filters by currency' do
+      matching_employee = create(:employee, currency: 'USD')
+      create(:employee, currency: 'INR')
+
+      get '/api/employees', params: { currency: 'USD' }
+
+      expect(response).to have_http_status(:ok)
+      expect(employee_ids).to eq([ matching_employee.id ])
+      expect(response.parsed_body.dig('pagination', 'total')).to eq(1)
+    end
   end
 
   describe 'GET /api/employees/:id' do

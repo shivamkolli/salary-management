@@ -44,6 +44,7 @@ module Api
     def filter_employees(employees)
       employees = employees.where(country: params[:country]) if params[:country].present?
       employees = employees.where(department: params[:department]) if params[:department].present?
+      employees = employees.where(currency: params[:currency]) if params[:currency].present?
       employees
     end
 
