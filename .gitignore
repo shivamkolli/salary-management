@@ -1,0 +1,17 @@
+**/.DS_Store
+backend/config/master.key
+
+backend/log/*
+backend/log/.keep
+
+backend/tmp/*
+backend/tmp/.keep
+
+backend/storage/*
+backend/storage/.keep
+
+backend/script/*
+backend/script/.keep
+
+backend/app/models/concerns/*
+backend/app/models/concerns/.keep

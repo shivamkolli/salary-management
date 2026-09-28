@@ -20,7 +20,9 @@ RSpec.describe 'Api::Employees', type: :request do
     end
 
     it 'paginates employees and caps the page size at 100' do
-      employees = create_list(:employee, 3, last_name: 'Employee')
+      employees = %w[Alice Bob Charlie].map do |first_name|
+        create(:employee, first_name: first_name, last_name: 'Employee')
+      end
 
       get '/api/employees', params: { page: 2, per_page: 2 }
 

@@ -1,15 +1,15 @@
 FactoryBot.define do
   factory :employee do
     sequence(:employee_number) { |number| format('EMP-%05d', number) }
-    sequence(:email) { |number| "employee#{number}@acme.test" }
-    first_name { 'Jane' }
-    last_name { 'Doe' }
+    sequence(:email) { |number| "employee#{number}.#{Faker::Internet.username}@acme.test" }
+    first_name { Faker::Name.first_name }
+    last_name { Faker::Name.last_name }
     country { 'IN' }
-    department { 'Engineering' }
-    job_title { 'Software Engineer' }
+    department { Faker::Company.industry }
+    job_title { Faker::Job.title }
     level { 'staff' }
     currency { 'INR' }
-    joined_date { Date.new(2020, 1, 1) }
+    joined_date { Faker::Date.between(from: 10.years.ago, to: Date.current) }
     active { true }
 
     trait :inactive do
