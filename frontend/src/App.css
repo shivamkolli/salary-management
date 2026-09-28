@@ -33,7 +33,17 @@
   border-radius: 0.625rem;
   background: var(--color-accent);
   color: #ffffff;
-  font-weight: 700;
+  box-shadow: 0 0.25rem 0.75rem rgb(41 82 68 / 18%);
+}
+
+.brand__mark svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.75;
 }
 
 .brand__name,

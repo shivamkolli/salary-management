@@ -5,7 +5,13 @@ export function AppHeader() {
     <header className="app-header">
       <div className="app-header__content">
         <Link className="brand" to="/summary" aria-label="ACME Compensation home">
-          <span className="brand__mark" aria-hidden="true">A</span>
+          <span className="brand__mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <rect x="3.5" y="5" width="17" height="14" rx="3" />
+              <path d="m7.5 14.5 3-3 2.5 2.5 3.5-4" />
+              <path d="M14.5 10h2v2" />
+            </svg>
+          </span>
           <span>
             <strong className="brand__name">ACME</strong>
             <span className="brand__product">Compensation</span>
