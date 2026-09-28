@@ -24,6 +24,10 @@ describe('SummaryPage', () => {
           Engineering: 6_000,
           Finance: 4_000,
         },
+        monthly_salary_by_currency: {
+          INR: '100000.00',
+          USD: '10000.00',
+        },
       },
     })
 
@@ -32,6 +36,11 @@ describe('SummaryPage', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Loading summary…')
     expect(await screen.findByRole('heading', { name: 'Organization summary' })).toBeInTheDocument()
     expect(screen.getByText('10,000')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Estimated monthly salary by currency' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('₹100,000.00')).toBeInTheDocument()
+    expect(screen.getByText('$10,000.00')).toBeInTheDocument()
     expect(screen.getByRole('row', { name: 'Engineering 6,000' })).toBeInTheDocument()
     expect(screen.getByRole('row', { name: 'Finance 4,000' })).toBeInTheDocument()
   })
@@ -44,6 +53,7 @@ describe('SummaryPage', () => {
           active_employee_count: 10_000,
           total_departments: 0,
           employees_by_department: {},
+          monthly_salary_by_currency: {},
         },
       })
 
@@ -56,6 +66,7 @@ describe('SummaryPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
 
     expect(await screen.findByRole('heading', { name: 'Organization summary' })).toBeInTheDocument()
+    expect(screen.getByText('No current salary data available.')).toBeInTheDocument()
     expect(mockedGetAnalyticsSummary).toHaveBeenCalledTimes(2)
   })
 

@@ -4,6 +4,14 @@ import { ApiError } from '../api/client'
 import type { AnalyticsSummary } from '../types/analytics'
 import './SummaryPage.css'
 
+function formatSalary(amount: string, currency: string) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: 2,
+  }).format(Number(amount))
+}
+
 export function SummaryPage() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -50,6 +58,7 @@ export function SummaryPage() {
   }
 
   const departments = Object.entries(summary.employees_by_department)
+  const monthlySalaries = Object.entries(summary.monthly_salary_by_currency)
 
   return (
     <section className="summary-page" aria-labelledby="summary-heading">
@@ -69,6 +78,33 @@ export function SummaryPage() {
           <strong>{summary.total_departments.toLocaleString()}</strong>
         </article>
       </div>
+
+      <section className="salary-summary" aria-labelledby="monthly-salary-heading">
+        <div className="salary-summary__heading">
+          <div>
+            <p className="eyebrow">Compensation</p>
+            <h2 id="monthly-salary-heading">Estimated monthly salary by currency</h2>
+          </div>
+          <p>Current annual salaries divided by 12</p>
+        </div>
+
+        {monthlySalaries.length === 0 ? (
+          <p className="salary-summary__empty">No current salary data available.</p>
+        ) : (
+          <div className="currency-cards">
+            {monthlySalaries.map(([currency, amount]) => (
+              <article
+                className="currency-card"
+                key={currency}
+                aria-label={`${currency} estimated monthly salary`}
+              >
+                <span>{currency}</span>
+                <strong>{formatSalary(amount, currency)}</strong>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="department-summary" aria-labelledby="department-summary-heading">
         <div className="department-summary__heading">

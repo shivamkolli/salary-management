@@ -14,6 +14,7 @@
 }
 
 .summary-card,
+.salary-summary,
 .department-summary {
   border: 1px solid var(--color-border);
   border-radius: 0.875rem;
@@ -35,6 +36,54 @@
   letter-spacing: -0.04em;
 }
 
+.salary-summary {
+  padding: 1.5rem;
+}
+
+.salary-summary__heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.salary-summary__heading h2 {
+  margin: 0.5rem 0 0;
+  font-size: 1.125rem;
+}
+
+.salary-summary__heading > p,
+.salary-summary__empty {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.currency-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem;
+}
+
+.currency-card {
+  display: grid;
+  gap: 0.4rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: #f9faf8;
+}
+
+.currency-card span {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.currency-card strong {
+  font-size: 1.35rem;
+}
+
 .department-summary {
   overflow: hidden;
 }
@@ -45,7 +94,7 @@
 }
 
 .department-summary__heading h2 {
-  margin: 0.25rem 0 0;
+  margin: 0.5rem 0 0;
   font-size: 1.125rem;
 }
 
@@ -111,5 +160,10 @@
 @media (max-width: 36rem) {
   .summary-cards {
     grid-template-columns: 1fr;
+  }
+
+  .salary-summary__heading {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
