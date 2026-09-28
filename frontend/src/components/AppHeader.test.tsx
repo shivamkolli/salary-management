@@ -12,6 +12,7 @@ describe('AppHeader', () => {
     )
 
     expect(screen.getByRole('link', { name: 'ACME Compensation home' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Summary' })).toHaveAttribute('href', '/summary')
     expect(screen.getByRole('link', { name: 'HR Manager' })).toHaveAttribute('href', '/employees')
   })
 })

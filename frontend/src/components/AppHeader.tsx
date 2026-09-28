@@ -12,7 +12,13 @@ export function AppHeader() {
           </span>
         </NavLink>
 
-        <nav aria-label="Primary navigation">
+        <nav className="app-navigation" aria-label="Primary navigation">
+          <NavLink
+            className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}
+            to="/summary"
+          >
+            Summary
+          </NavLink>
           <NavLink
             className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}
             to="/employees"
