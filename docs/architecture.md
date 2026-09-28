@@ -2,92 +2,87 @@
 
 ## Overview
 
-The system uses a React frontend, a Rails API, and PostgreSQL. One backend handles employees, salary revisions, and analytics. Frontend and backend share a repository and deploy separately.
+The system is a monorepo with a React frontend, a Rails JSON API, and PostgreSQL.
 
 ```text
-┌─────────────────────────────┐
-│ React + TypeScript          │
-│ Frontend in the browser     │
-└──────────────┬──────────────┘
-               │ HTTPS / JSON
-               ▼
-┌─────────────────────────────┐
-│ Ruby on Rails API           │
-│ Application logic           │
-└──────────────┬──────────────┘
-               │ SQL / database connection
-               ▼
-┌─────────────────────────────┐
-│ PostgreSQL                  │
-│ employees / salary revisions│
-└─────────────────────────────┘
+React + TypeScript
+        |
+        | HTTPS / JSON
+        v
+Ruby on Rails API
+        |
+        | Active Record / SQL
+        v
+PostgreSQL
 ```
 
-The browser calls the API over HTTPS. Rails connects to PostgreSQL through its database driver.
+The frontend handles navigation, forms, presentation, and user-facing states. Rails owns validation, persistence, current-salary selection, pagination, filtering, and analytics. PostgreSQL stores employees and append-only salary revisions.
 
-## Why a monolith?
+## Components
 
-A single backend keeps business logic, transactions, testing, and deployment straightforward. Start with database queries and appropriate indexes for the 10,000-employee dataset; verify performance before adding caching, queues, or separate services.
+| Component | Responsibility |
+| --- | --- |
+| React frontend | Summary, employee directory, employee details, salary form, loading and error states |
+| Rails API | Request parameters, validation, row-locked salary writes, current-salary logic, and JSON responses |
+| PostgreSQL | Employee and salary history storage, uniqueness, foreign keys, sorting, filtering, and aggregation |
+| GitHub Actions | Backend and frontend tests, lint, security checks, and frontend build |
+| Render | Rails web service, managed PostgreSQL, and React static-site target |
 
-## Component responsibilities
+## API
 
-| Component | Responsibilities | Technology |
+| Method | Endpoint | Behavior |
 | --- | --- | --- |
-| Frontend | Employee directory, profiles, salary forms, and dashboard; loading, error, and conflict states. | React, TypeScript, Vite |
-| Backend | Request validation, salary rules, transactional writes, filtering, pagination, and reporting. | Ruby on Rails, Active Record |
-| Database | Employee and salary-revision storage, constraints, row locking, and exact monetary aggregation. | PostgreSQL |
+| `GET` | `/api/health` | Returns service status |
+| `GET` | `/api/employees` | Searches, filters, orders, and paginates active employees |
+| `GET` | `/api/employees/:id` | Returns employee details, current salary, and effective history |
+| `POST` | `/api/employees/:id/salary_revisions` | Appends a validated salary revision under an employee row lock |
+| `GET` | `/api/analytics/summary` | Returns active headcount, department breakdown, and estimated monthly salary by currency |
 
-The backend owns business rules and financial calculations. Client-side validation provides immediate feedback. Schema and salary-change logic are detailed in [data-model.md](data-model.md); trade-offs are in [decisions.md](decisions.md).
+Employee list parameters are `search`, `country`, `department`, `currency`, `page`, and `per_page`. Results use a fixed `last_name`, `first_name`, and `id` order. Custom sorting is outside the implemented scope.
 
-## API boundary
-
-Use a JSON REST API under `/api`.
-
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| GET | `/api/employees` | Search, filter, sort, and paginate employees. |
-| GET | `/api/employees/:id` | Employee details, current salary and salary revisions in reverse order. |
-| POST | `/api/employees/:id/salary_revisions` | Create a salary revision with a stale-edit check. |
-| GET | `/api/analytics/summary` | Filtered headcount and per-currency salary statistics. |
-| GET | `/api/health` | Minimal service health status. |
-
-- **Pagination:** `page` and `per_page`; default 25, maximum 100.
-- **Filtering:** `search`, `country`, `department`, and `currency` where applicable.
-- **Sorting:** Allowlisted `sort_by` and `sort_dir`; salary sorting requires one currency.
-- **Responses:** Decimal strings for money and consistent field errors. Use 200/201 for success, 400 for malformed requests, 404 for missing resources, 409 for stale edits, and 422 for validation failures.
-
-The demo has no login and uses synthetic data only. Keep secrets outside Git, validate requests, parameterize queries, and restrict CORS to the frontend origin. CORS does not provide authentication.
-
-## Deployment architecture
-
-Target Render for the frontend, Rails service, and managed PostgreSQL database.
+## Read flow
 
 ```text
-GitHub Repository
-        │
-        ▼
-GitHub Actions CI
-Tests · Lint · Build
-        │
-        │ Checks pass
-        ▼
-Render Deployment
-        ├── Static Site       → React frontend
-        └── Web Service       → Rails API
-                │
-                ▼
-        Render Managed PostgreSQL
+Browser -> React page -> Rails endpoint -> Active Record query -> PostgreSQL
+Browser <- JSON response <- Rails serializer logic <- query result
 ```
 
-This release flow is planned, not yet configured. Deploy only after checks pass. Verify hosting plans and runtime compatibility during setup; keep credentials in server-side environment configuration and run demo seeding explicitly, not on every deployment.
+The employee detail endpoint eager-loads salary revisions and derives current salary from revisions effective on or before today. The summary uses a PostgreSQL subquery to select one current salary per employee before grouping monetary values by currency.
 
-## Testing approach
+## Salary write flow
 
-| Layer | Tools | Focus |
-| --- | --- | --- |
-| Domain and database | RSpec, FactoryBot | Salary rules, effective dates, constraints, and history preservation. |
-| API | RSpec | Request contracts, pagination, validation, and concurrent-update conflicts. |
-| Frontend | Vitest, React Testing Library | User interactions, forms, and error states. |
-| CI | GitHub Actions, RuboCop, ESLint | Tests, lint, type checks, and frontend build. |
+```text
+Submit form
+    -> find employee
+    -> lock employee row
+    -> validate and insert salary revision
+    -> return 201 or validation errors
+    -> update employee page
+```
 
-**Test-Driven Development (TDD):** For core business behavior, follow **Red → Green → Refactor**: write a failing test, implement the minimum passing code, then refactor while keeping tests green.
+The lock serializes writes for one employee. There is no `lock_version`, salary version counter, or stale-form token.
+
+## Security boundary
+
+The demonstration has no authentication and uses synthetic data only. Rails permits browser requests from the configured `FRONTEND_ORIGIN`, validates allowed parameters, and uses Active Record query binding. CORS is not authentication, so the service must not contain real salary data.
+
+## Deployment
+
+```text
+GitHub repository
+       |
+       +--> GitHub Actions
+       |
+       +--> Render Rails web service --> Render PostgreSQL
+       |
+       +--> Render static site for React
+```
+
+The Rails API is live on Render. Deployment secrets are configured in Render environment variables. Database migrations run as part of deployment configuration, while seed data is run explicitly rather than on every application start.
+
+## Testing
+
+- RSpec model and request specs exercise Rails behavior with PostgreSQL.
+- Vitest and React Testing Library exercise UI behavior with mocked API boundaries.
+- GitHub Actions runs both suites, lint, security scans, and the production frontend build.
+- Browser end-to-end tests and formal performance benchmarks remain outside the implemented scope.

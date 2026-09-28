@@ -1,145 +1,115 @@
 # Design Decisions — ACME Salary Management System
 
-**MVP design · Draft for review**
+This document records the choices implemented for the assessment and the practical trade-offs accepted to keep the solution focused.
 
-This document explains the proposed technical choices behind the [product requirements](requirements.md), the alternatives considered, and their consequences. These are implementation plans, not claims of completed work. Review each decision when its implementation begins and update it when evidence changes the design.
+## 1. Rails API, React frontend, and PostgreSQL
 
-## 1. Backend: Ruby on Rails
+**Decision:** Use Rails in API mode, React with TypeScript and Vite, and PostgreSQL in every environment.
 
-**Decision:** Use Ruby on Rails in API-only mode for the backend.
+**Reason:** The stack fits the role, supports exact decimal storage and relational history, and keeps frontend and backend responsibilities clear.
 
-**Reason:** Rails matches the target ROR role and provides conventions for validation, relational persistence, transactions, and HTTP APIs.
+**Trade-off:** Two applications require separate setup and deployment configuration.
 
-**Alternative considered:** Another backend framework, such as Node.js with Express or NestJS.
+## 2. One repository and one backend
 
-**Trade-off:** The team must work within Rails conventions and maintain a separate frontend application. Framework choice alone does not establish performance; measure the actual workload.
+**Decision:** Keep frontend, employee APIs, salary writes, and analytics in one repository with one Rails backend.
 
-## 2. Database: PostgreSQL across environments
+**Reason:** The assessment workflows share data and transaction boundaries and do not justify distributed services.
 
-**Decision:** Use PostgreSQL in development, test, and deployment.
+**Trade-off:** Backend features deploy together, which is acceptable at this scale.
 
-**Reason:** One database engine reduces differences in SQL, constraints, and transactional behavior across environments. Exact numeric storage supports salary calculations.
+## 3. REST JSON API
 
-**Alternative considered:** SQLite throughout, or SQLite locally with PostgreSQL in deployment.
+**Decision:** Expose a small REST API under `/api`.
 
-**Trade-off:** PostgreSQL requires a local service and database configuration. Pin compatible versions during setup rather than copying versions from the reference project.
+**Reason:** Employee lookup, detail, salary creation, analytics, and health map directly to resource-oriented endpoints.
 
-## 3. Architecture: One backend application
+**Trade-off:** Frontend types and backend response shapes must be maintained together.
 
-**Decision:** Keep employees, salary changes, and reporting within one Rails application, with the React frontend in the same repository.
+## 4. Append salary revisions
 
-**Reason:** The workflows share data and transaction boundaries. One backend keeps deployment, debugging, and development manageable for the assessment.
+**Decision:** Every accepted salary change creates a `salary_revisions` record. Existing history has no update or delete endpoint.
 
-**Alternative considered:** Separate employee, compensation, and analytics services.
+**Reason:** HR can see previous amounts, effective dates, and reasons without destructive replacement.
 
-**Trade-off:** Backend modules share a deployment lifecycle. Separate services would allow independent deployment but add network and consistency concerns. Revisit boundaries only for a demonstrated need; 10,000 records is not a concurrency estimate.
+**Trade-off:** History grows over time and current salary must be derived.
 
-## 4. API: REST with JSON
+## 5. Derive current salary by effective date
 
-**Decision:** Expose resource-oriented JSON endpoints for `employees` and `salary_revisions`.
+**Decision:** Select the latest revision effective on or before today, ordered by `effective_from DESC, id DESC`.
 
-**Reason:** The UI has a small set of defined workflows that map naturally to HTTP resources and explicit error responses.
+**Reason:** Backdated records should not replace a later-effective salary, and record ID provides a deterministic same-date tie-breaker.
 
-**Alternative considered:** GraphQL with client-selected response fields.
+**Trade-off:** Future revisions remain stored but do not appear as current or in effective history until their date.
 
-**Trade-off:** REST response shapes require deliberate coordination with the UI. Define request contracts, permitted filters, pagination, and error codes in request tests. Send monetary values as decimal strings to preserve precision.
+## 6. Row locking without version columns
 
-## 5. Salary revision: Append records
+**Decision:** Wrap salary creation in `employee.with_lock`. Do not add `lock_version`, a salary version counter, or a stale-edit token.
 
-**Decision:** Create a new `salary_revisions` record for every accepted change, with an amount, effective date, required reason, server-managed timestamps. Do not expose history editing or deletion.
+**Reason:** The lock provides a simple transaction boundary and serializes concurrent inserts for one employee.
 
-**Reason:** HR must be able to inspect previous values and understand why compensation changed.
+**Trade-off:** A waiting request can still submit data from an outdated browser view. Explicit stale-edit detection is deferred.
 
-**Alternative considered:** Overwrite a current salary field without preserving prior values.
+## 7. Exact money and separate currencies
 
-**Trade-off:** History adds storage and query complexity. Corrections become new entries. Without authentication, records cannot establish who made a change; application-level append-only behavior is not tamper-proof storage.
+**Decision:** Store annual base salary as `decimal(15,2)` and keep currency on Employee. Support INR, USD, EUR, and GBP.
 
-## 6. Current salary: Effective date with explicit precedence
+**Reason:** Decimal storage avoids floating-point errors, and separating currencies prevents meaningless combined totals.
 
-**Decision:** Derive current salary from `SalaryRevision` records effective on or before the UTC business date, ordered by `effective_from DESC, id DESC`. Allow backdating on or after employment starts; reject future dates in the MVP.
+**Trade-off:** Currency changes and exchange-rate conversion require a different historical model and are outside scope.
 
-**Reason:** Effective date describes when a salary applies, while entry time describes when it was recorded. A backdated entry must not automatically replace a later-effective salary.
+## 8. Bounded offset pagination and fixed ordering
 
-**Alternative considered:** Always choose the most recently entered record, or maintain a separate current salary amount on Employee.
+**Decision:** Use offset pagination with 25 records by default, a maximum of 100, and fixed name ordering.
 
-**Trade-off:** Reads need a shared latest-effective-record query and supporting tests. Same-date corrections use the higher record ID while retaining earlier entries. All revision inserts acquire the employee lock before allocating an ID; this makes ID ordering meaningful within that employee’s history. Effective-date and tie-breaking policies remain working assumptions to confirm before implementation.
+**Reason:** This keeps the API and UI straightforward for 10,000 employees.
 
-## 7. Concurrent changes: Row locking and stale-edit detection
+**Trade-off:** Late pages can become slower and there is no user-selected sorting.
 
-**Decision:** Use `employee.with_lock` and compare the submitted latest revision ID before creating a salary revision. No version columns are needed.
+## 9. Controlled frontend filter values
 
-**Reason:** The lock serializes writes; the revision ID detects outdated forms, including changes caused by backdated entries.
+**Decision:** Keep country, department, and currency options as small controlled frontend lists matching the seed dataset.
 
-**Alternative considered:** Rails optimistic locking with `lock_version`.
+**Reason:** The assessment has no workflow for administering these values, so a filter-metadata endpoint would add little value.
 
-**Trade-off:** Updates to the same employee may wait. Keep transactions short, require every salary write to follow this flow, and return HTTP 409 for stale submissions.
+**Trade-off:** Changes to seed categories require a coordinated frontend update.
 
-## 8. Money and currencies: Exact values and separate reporting
+## 10. SQL analytics without caching
 
-**Decision:** Declare salary amount with Rails `t.decimal :amount, precision: 15, scale: 2, null: false` (PostgreSQL `numeric(15,2)`), validate positive amounts and reject excess fractional precision. Keep each employee’s currency fixed; initially support INR, USD, EUR, and GBP. Aggregate and rank salary only within a currency.
+**Decision:** Compute active headcount, department counts, and estimated monthly salary by currency in PostgreSQL on each request.
 
-**Reason:** Exact representation and explicit currency boundaries keep salary comparisons meaningful.
+**Reason:** Set-based queries keep aggregation out of Ruby and return current results for the 10,000-employee dataset.
 
-**Alternative considered:** Floating-point amounts, integer minor units, or exchange-rate normalization to one reporting currency.
+**Trade-off:** The current-salary query is more complex and repeated summary requests are not cached. Measure before optimizing.
 
-**Trade-off:** NUMERIC requires explicit API serialization and rounding rules. Integer minor units are also valid but require unit conversion. No single monetary total spans currencies. Currency changes and FX normalization would require additional historical and valuation policies.
+## 11. Single unauthenticated demo context
 
-## 9. Authentication: Outside the demo scope
+**Decision:** Present one HR Manager context without login or roles.
 
-**Decision:** Provide a single HR Manager demo context without login, user roles, or authenticated actor attribution.
+**Reason:** Authentication and approvals are outside the assessment’s chosen scope.
 
-**Reason:** The agreed MVP focuses on employee lookup, salary history, and compensation analysis using synthetic data.
+**Trade-off:** Anyone with the API URL can access or change synthetic data. CORS limits browser origins but does not secure the API.
 
-**Alternative considered:** An authenticated HR account with session-based access.
+## 12. Deterministic synthetic seeds
 
-**Trade-off:** Anyone who can reach the demo API can access or alter its synthetic data. It is unsuitable for real compensation data. Keep secrets outside Git, validate requests, parameterize queries, and restrict browser CORS to the frontend origin; CORS does not prevent direct API access.
+**Decision:** Seed 10,000 employees using Faker with a fixed random source, controlled cycles, and batch writes.
 
-## 10. Pagination: Server-side and bounded
+**Reason:** Reviewers can reproduce a realistic dataset without real personal information.
 
-**Decision:** Paginate employee and history lists on the server, using 25 records by default and a maximum of 100. Start with offset pagination and deterministic sorting with a unique tie-breaker.
+**Trade-off:** The dataset is representative for demonstration, not a model of an actual organization.
 
-**Reason:** Bounded responses keep browser payloads manageable and let the database apply filters and sorting before pagination.
+## 13. Behavior-focused automated tests
 
-**Alternative considered:** Load the entire dataset into the browser, or start with cursor pagination.
+**Decision:** Use RSpec and FactoryBot for Rails, and Vitest with React Testing Library for the frontend. Run quality checks in GitHub Actions.
 
-**Trade-off:** Browsing requires additional requests, and concurrent changes can shift offset pages. Cursor pagination adds contract complexity; reconsider it if measured late-page performance or navigation consistency requires it. Salary sorting requires a selected currency.
+**Reason:** These tests cover the main domain and user behaviors with fast feedback.
 
-## 11. Analytics: SQL over current salaries
+**Trade-off:** There is no full-browser end-to-end suite, concurrency stress test, or formal performance benchmark.
 
-**Decision:** Calculate headcount, totals, average, and median in PostgreSQL using exactly one current salary per employee. Apply filters before aggregation and group monetary results by currency. Start without caching.
+## 14. Render deployment
 
-**Reason:** The database can perform set-based calculations without transferring the full employee and salary history dataset into Ruby or the browser.
+**Decision:** Deploy PostgreSQL and Rails on Render and use a Render static site for the React build.
 
-**Alternative considered:** Application-side aggregation or precomputed, cached summaries.
+**Reason:** Managed services keep the assessment deployment reproducible and small.
 
-**Trade-off:** Latest-effective-record selection and median queries need careful tests. Define median as the middle amount, or the exact average of the two middle amounts for an even count. Round displayed averages and medians to two decimals; empty groups have no average or median. Measure query plans before adding indexes or caching.
-
-## 12. Frontend: React, TypeScript, and Vite
-
-**Decision:** Build a React client with TypeScript and Vite, keeping domain validation and calculations in Rails.
-
-**Reason:** This meets the assessment’s UI constraint and supports interactive search, forms, and dashboards without requiring server rendering.
-
-**Alternative considered:** Next.js with a server-rendered application.
-
-**Trade-off:** The browser must handle loading, errors, and data fetching explicitly. Frontend types do not validate incoming API data or replace backend checks. Choose a component library during UI setup based on accessibility and the required controls.
-
-## 13. Employee attributes: Controlled string values
-
-**Decision:** Store country, department, and job title as controlled strings on read-only seeded employee profiles.
-
-**Reason:** The MVP has no workflow for administering these entities; controlled seed values keep filters consistent.
-
-**Alternative considered:** Separate lookup tables with foreign keys and administration workflows.
-
-**Trade-off:** Strings do not provide lookup-table referential integrity, and future renames require coordinated updates. Introduce lookup entities if managing organizational structure becomes part of the product.
-
-## 14. Deployment: Render as the target
-
-**Decision:** Target a Render deployment with a Rails web service, React static site, and PostgreSQL database.
-
-**Reason:** Render is the agreed deployment target for the Rails service, React static site, and PostgreSQL database. Verify available plans and runtime support when setting up deployment.
-
-**Alternative considered:** Another managed hosting platform or directly managed cloud infrastructure.
-
-**Trade-off:** Hosting cost, persistence, capacity limits, and idle behavior depend on the selected plan. Record verified settings during deployment rather than assuming a free tier or database size limit. Keep the demo synthetic and document its operational limitations.
+**Trade-off:** Plan limits, cold starts, and region affect observed performance and must not be confused with application query time.

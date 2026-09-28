@@ -1,18 +1,12 @@
 # Data Model — ACME Salary Management System
 
-**MVP schema · Draft for review**
-
 ## Overview
 
-The system has two entities: **Employee** and **SalaryRevision**. An employee holds identity and employment information; salary revisions preserve the employee’s compensation history. Current salary is derived from effective dates rather than stored separately.
-
-This design follows the [requirements](requirements.md) and [design decisions](decisions.md). Employee profiles and currencies are fixed in the MVP, while salary changes append new records. Authentication and employee lifecycle management are outside scope.
-
-## Entity relationship diagram
+The implemented schema has two entities. Employee stores identity and organizational data. SalaryRevision stores annual base-salary history. Current salary is derived from history and is not duplicated on Employee.
 
 ```mermaid
 erDiagram
-    EMPLOYEES ||--|{ SALARY_REVISIONS : "has salary history"
+    EMPLOYEES ||--o{ SALARY_REVISIONS : has
     EMPLOYEES {
         bigint id PK
         string employee_number UK
@@ -32,7 +26,7 @@ erDiagram
     SALARY_REVISIONS {
         bigint id PK
         bigint employee_id FK
-        decimal amount
+        decimal base_salary
         date effective_from
         text reason
         timestamp created_at
@@ -40,126 +34,97 @@ erDiagram
     }
 ```
 
-Each employee must have at least one salary revision. Each revision belongs to exactly one employee. Creating an employee and its initial salary is one atomic operation; a foreign key alone cannot enforce the minimum-one-revision rule.
+An employee may temporarily have no salary revisions, although the seed task creates one initial revision for each seeded employee.
 
-## Entities
+## Employees
 
-### Employee
+| Column | Database type | Implemented constraint or behavior |
+| --- | --- | --- |
+| `id` | BIGINT | Primary key |
+| `employee_number` | VARCHAR(20) | Required, unique index |
+| `first_name` | VARCHAR(100) | Required at database level |
+| `last_name` | VARCHAR(100) | Required at database level |
+| `email` | VARCHAR(255) | Required, unique index |
+| `country` | VARCHAR(2) | Required |
+| `department` | VARCHAR(100) | Required |
+| `job_title` | VARCHAR(100) | Required |
+| `level` | VARCHAR(50) | Required; model allowlist |
+| `currency` | VARCHAR(3) | Required; INR, USD, EUR, or GBP model allowlist |
+| `joined_date` | DATE | Required |
+| `active` | BOOLEAN | Required, defaults to true |
+| `created_at` | TIMESTAMP | Rails-managed, required |
+| `updated_at` | TIMESTAMP | Rails-managed, required |
 
-Stores the employee’s identity, organizational placement, and compensation currency.
+The API exposes seeded employee profiles as read-only. `Employee.active` supplies the directory and summary population.
 
-| Column | Data type | Constraints | Purpose |
-| --- | --- | --- | --- |
-| `id` | BIGINT | Primary key, generated | Internal employee identifier. |
-| `employee_number` | VARCHAR(20) | Unique, required | Human-readable identifier, such as `EMP-00001`. |
-| `first_name` | VARCHAR(100) | Required, nonblank | Employee’s first name. |
-| `last_name` | VARCHAR(100) | Required, nonblank | Employee’s last name. |
-| `email` | VARCHAR(255) | Required, case-insensitively unique | Work email, trimmed and stored in lowercase. |
-| `country` | VARCHAR(2) | Required, supported value | Country code, such as `IN` or `US`. |
-| `department` | VARCHAR(100) | Required, controlled value | Department used for filtering and reporting. |
-| `job_title` | VARCHAR(100) | Required, controlled value | Employee’s job title. |
-| `level` | VARCHAR(50) | Required, controlled value | Employee’s seniority level. |
-| `currency` | VARCHAR(3) | Required, supported value | Fixed compensation currency: `INR`, `USD`, `EUR`, or `GBP`. |
-| `joined_date` | DATE | Required | Employment start date; not in the future for seeded active employees. |
-| `created_at` | TIMESTAMP | Required, server-managed | Record creation time in UTC. |
-| `updated_at` | TIMESTAMP | Required, server-managed | Record update time in UTC. |
+## Salary revisions
 
-### SalaryRevision
+| Column | Database type | Implemented constraint or behavior |
+| --- | --- | --- |
+| `id` | BIGINT | Primary key and same-date tie-breaker |
+| `employee_id` | BIGINT | Required foreign key to employees; indexed |
+| `base_salary` | NUMERIC(15,2) | Required; model requires a value greater than zero |
+| `effective_from` | DATE | Required in database and model |
+| `reason` | TEXT | Required in database and model |
+| `created_at` | TIMESTAMP | Rails-managed, required |
+| `updated_at` | TIMESTAMP | Rails-managed, required |
 
-Stores an initial salary or a subsequent change. Records are appended and retained; existing revisions are not edited or deleted through the application.
+The public API supports creation only. This gives the application append-only behavior, although privileged database access could still alter records.
 
-| Column | Data type | Constraints | Purpose |
-| --- | --- | --- | --- |
-| `id` | BIGINT | Primary key, generated | Revision identifier; resolves same-effective-date ties. |
-| `employee_id` | BIGINT | Required foreign key | Employee whose salary this revision describes. |
-| `base_salary` | NUMERIC(15,2) | Required, greater than zero | Gross annual base salary in the employee’s currency. |
-| `effective_from` | DATE | Required | Date the salary applies, from employment start through today. |
-| `reason` | TEXT | Required, nonblank | Explanation for the change or initial salary entry. |
-| `created_at` | TIMESTAMP | Required, server-managed | When the revision was recorded, in UTC. |
-| `updated_at` | TIMESTAMP | Required, server-managed | Standard record timestamp; remains equal to creation time for append-only records. |
+## Current salary and history
 
-Salary excludes bonuses, benefits, taxes, and deductions. Amounts accept at most two decimal places and cannot exceed `9,999,999,999,999.99`. Reject excess fractional precision before storage instead of silently rounding it.
+For an employee:
 
-## Salary selection and change logic
+1. Ignore revisions with `effective_from` after today.
+2. Order remaining revisions by effective date descending.
+3. For the same effective date, order by ID descending.
+4. Use the first revision as current salary.
 
-### Current salary
+The employee detail response uses the same order for visible history. Analytics perform equivalent current-revision selection in PostgreSQL before summing annual salaries and dividing by 12.
 
-Select the employee’s revision with the latest effective date on or before the UTC business date. If multiple revisions share that date, the highest revision ID wins. Future-dated entries are rejected; backdating is allowed on or after employment starts.
+## Salary creation
 
-| Effective date | Revision ID | Amount | Result |
-| --- | --- | --- | --- |
-| 2026-01-01 | 101 | 100,000.00 | Initial salary. |
-| 2026-07-01 | 102 | 120,000.00 | Becomes current on July 1. |
-| 2026-04-01 | 103 | 110,000.00 | Backdated entry; July salary remains current. |
-| 2026-07-01 | 104 | 125,000.00 | Same-date correction; replaces revision 102 as current, preserving both records. |
+The salary endpoint:
 
-History is displayed by effective date descending, then revision ID descending. An amount equal to the current salary may still be meaningful at a different effective date.
+1. Finds the employee.
+2. Acquires a row lock with `employee.with_lock`.
+3. Validates and inserts the revision inside the transaction.
+4. Returns HTTP 201 on success or field errors on validation failure.
 
-### Latest recorded revision
-
-The highest revision ID identifies the latest recorded change for an employee. It can differ from the current salary’s ID: after revision 103 above, the latest recorded ID is 103 but the current salary is still revision 102.
-
-### Safe salary changes
-
-1. Load the displayed salary and latest revision ID from one consistent database snapshot.
-2. When saving, begin a transaction and acquire a row lock on the employee.
-3. Read the employee’s latest revision ID again and compare it with the submitted ID.
-4. If they differ, reject the stale submission with HTTP 409. Otherwise, validate and append the revision.
-5. Commit the change and release the lock. Any failure rolls back the operation.
-
-A missing or malformed token receives HTTP 422. Keep transactions short and require every salary-insertion path to lock the employee before generating the revision ID. This serializes entries for the same employee, making their IDs suitable for tie-breaking; IDs do not represent global commit order across employees.
-
-The lock prevents overlapping writes, while the ID comparison detects outdated forms. Row locking alone does not detect stale browser data. A repeated request with an old token cannot create another revision; after an uncertain response, reload history before intentionally resubmitting. No employee update or separate version counter is needed.
+The lock serializes writes for the same employee. The implementation does not compare a revision token and therefore does not detect a stale browser view after waiting.
 
 ## Indexes
 
-| Table | Index | Type | Purpose |
-| --- | --- | --- | --- |
-| `employees` | `employee_number` | Unique B-tree | Identifier lookup and uniqueness. |
-| `employees` | Lowercase email expression | Unique B-tree | Case-insensitive email uniqueness. |
-| `salary_revisions` | `(employee_id, effective_from DESC, id DESC)` | Composite B-tree | Current-salary selection and ordered history. |
-| `salary_revisions` | `(employee_id, id DESC)` | Composite B-tree | Latest-recorded revision lookup for stale-edit detection. |
+| Table | Index | Purpose |
+| --- | --- | --- |
+| `employees` | Unique `employee_number` | Identifier uniqueness and lookup |
+| `employees` | Unique `email` | Email uniqueness and lookup |
+| `salary_revisions` | `employee_id` | Association lookup and foreign-key access |
 
-Primary keys are indexed automatically. The two salary indexes serve different orderings and also support employee-based lookups. Do not make employee/effective-date pairs unique: same-date corrections must remain possible. Add country, department, or search indexes only after inspecting actual query plans; ordinary name indexes do not generally accelerate leading-wildcard substring search.
+Primary keys are indexed automatically. A composite `(employee_id, effective_from DESC, id DESC)` index is a measured-performance candidate, not an implemented index.
 
 ## Design rationale
 
-### Separate salary history from employee details
+### Separate employee and salary history
 
-Employee identity and compensation changes have different lifecycles. A separate revision table preserves changes without repeatedly copying the employee profile. Corrections are new entries, keeping prior values and explanations available.
+Identity and compensation have different lifecycles. A separate table preserves each accepted revision without copying the employee profile.
 
-### Derive current salary from history
+### Derive current salary
 
-A separate current-salary amount would duplicate financial state and require synchronization with history. Deriving it keeps one source of truth and handles backdated entries consistently. The trade-off is a more involved read query, supported by the effective-date index and verified through performance measurements.
+Keeping salary history as the source of truth avoids synchronizing a separate current-salary column. The trade-off is ordering work during detail and analytics reads.
 
-### Use exact decimal amounts
+### Store currency on Employee
 
-Floating-point representation is unsuitable for exact salary values. NUMERIC(15,2) provides 13 integral digits and two fractional digits. APIs should transmit amounts as decimal strings, preserving precision through the browser boundary.
+Currency is fixed for the assessment, so storing it once avoids duplicating it on every salary revision. Historical currency changes would require a different model.
 
-### Store currency once on Employee
+### Keep organizational values as strings
 
-The MVP fixes each employee’s currency, so duplicating it on every revision would add a consistency obligation without supporting an in-scope workflow. A future currency-change feature must add historical currency representation before employee currency can be changed.
+There are no country, department, title, or level administration workflows. Strings keep the schema small; lookup tables would be appropriate if those entities became editable.
 
-### Avoid separate version columns
+## Known limitations
 
-Every revision already has a unique ID. Combining that existing ID with an employee row lock supports same-date precedence and stale-edit detection without maintaining another counter. This relies on append-only history and a shared locking protocol for every insertion path.
-
-### Keep organizational attributes as controlled strings
-
-Country, department, and job title have no management workflows in the MVP. Controlled values keep filtering consistent with a small schema. Lookup tables become appropriate if organizational renaming, administration, or stronger referential integrity is required.
-
-### Preserve history when employees are referenced
-
-Restrict deletion of employees with salary revisions rather than cascading history deletion. Employee deletion is outside scope. Append-only is an application guarantee, not protection against privileged database edits.
-
-## Domain invariants and enforcement
-
-| Rule | Enforcement |
-| --- | --- |
-| Employee number and normalized email are unique. | Database unique indexes, supported by application validation. |
-| Every revision references an existing employee; referenced employees cannot be deleted. | Foreign key with restricted deletion. |
-| Required values are present and text fields are nonblank. | Non-null constraints, text checks, and application validation. |
-| Salary is positive and uses a supported employee currency. | Database checks and application validation; raw input precision checked before conversion. |
-| Effective date is between employment start and the UTC business date. | Application validation; this cross-record, time-dependent rule is not a simple static row constraint. |
-| Every employee starts with at least one revision. | Atomic seed creation and verification; not guaranteed by the foreign key alone. |
-| Accepted revisions remain unchanged, and stale submissions do not append records. | Shared transactional write operation and concurrency tests. |
+- Database constraints enforce non-null fields and referential integrity, while several text fields rely on controlled seed data rather than full model validation.
+- The email unique index is case-sensitive; the seed normalizes generated emails to lowercase.
+- `NUMERIC(15,2)` provides exact stored values, but the model does not explicitly reject input with more than two fractional digits before PostgreSQL conversion.
+- Effective dates are required but are not restricted to the employee’s join date or today.
+- Salary history is not separately paginated.
