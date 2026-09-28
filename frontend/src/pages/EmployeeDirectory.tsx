@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { getEmployees } from '../api/employees'
 import type { Employee, Pagination } from '../types/employee'
@@ -176,7 +177,9 @@ export function EmployeeDirectory() {
                 {employees.map((employee) => (
                   <tr key={employee.id}>
                     <td>
-                      <strong>{employee.first_name} {employee.last_name}</strong>
+                      <Link className="employee-link" to={`/employees/${employee.id}`}>
+                        {employee.first_name} {employee.last_name}
+                      </Link>
                       <span>{employee.email}</span>
                       <span>{employee.employee_number}</span>
                     </td>

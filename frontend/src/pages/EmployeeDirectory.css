@@ -147,6 +147,19 @@ td span {
   display: block;
 }
 
+.employee-link {
+  display: inline-block;
+  color: var(--color-text);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.employee-link:hover {
+  color: var(--color-accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
 td span {
   margin-top: 0.125rem;
   color: var(--color-text-muted);
